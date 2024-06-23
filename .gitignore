@@ -1,3 +1,32 @@
 node_modules
-dist
-.env
+apps/be/node_modules
+apps/be/dist
+apps/be/.env
+apps/be/logs
+
+
+# 
+# Logs
+apps/fe/logs
+apps/fe/*.log
+apps/fe/npm-debug.log*
+apps/fe/yarn-debug.log*
+apps/fe/yarn-error.log*
+apps/fe/pnpm-debug.log*
+apps/fe/lerna-debug.log*
+
+apps/fe/node_modules
+apps/fe/dist
+apps/fe/dist-ssr
+apps/fe/*.local
+
+# Editor directories and files
+apps/fe/.vscode/*
+apps/fe/!.vscode/extensions.json
+apps/fe/.idea
+apps/fe/.DS_Store
+apps/fe/*.suo
+apps/fe/*.ntvs*
+apps/fe/*.njsproj
+apps/fe/*.sln
+apps/fe/*.sw?

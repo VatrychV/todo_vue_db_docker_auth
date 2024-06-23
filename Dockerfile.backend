@@ -1,0 +1,61 @@
+ARG NODE_VERSION=18.19.1
+
+FROM node:${NODE_VERSION}-alpine as base
+WORKDIR /usr/src/app
+
+FROM base as deps
+COPY package.json package-lock.json ./ 
+COPY apps/be/package.json apps/be/tsconfig.json ./apps/be/
+RUN npm ci
+
+FROM deps as build
+# Copy the rest of the source files into the image
+COPY . .
+# Run the build script for the backend
+WORKDIR /usr/src/app/apps/be
+RUN npm run build
+
+FROM base as final
+# Use production node environment by default
+ENV NODE_ENV production
+
+# Create a logs directory
+RUN mkdir -p /usr/src/app/apps/be/logs && \
+    chown -R node:node /usr/src/app/apps/be/logs
+
+# Copy package.json files
+COPY package.json ./
+COPY apps/be/package.json ./apps/be/
+
+# Copy all dependencies and built application
+COPY --from=deps /usr/src/app/node_modules ./node_modules
+COPY --from=deps /usr/src/app/apps/be/node_modules ./apps/be/node_modules
+COPY --from=build /usr/src/app/apps/be/dist ./apps/be/dist
+COPY --from=build /usr/src/app/apps/be/src ./apps/be/src
+
+# Set working directory to the backend folder
+WORKDIR /usr/src/app/apps/be
+
+COPY apps/be/tsconfig.json ./
+
+# Create a startup script
+RUN echo '#!/bin/sh' > /usr/src/app/apps/be/start.sh && \
+    echo 'echo "Contents of /usr/src/app/apps/be:"' >> /usr/src/app/apps/be/start.sh && \
+    echo 'ls -la /usr/src/app/apps/be' >> /usr/src/app/apps/be/start.sh && \
+    echo 'echo "Running migrations..."' >> /usr/src/app/apps/be/start.sh && \
+    echo 'npm run prod:migration:run' >> /usr/src/app/apps/be/start.sh &&  \
+    echo 'echo "Migrations complete. Starting application..."' >> /usr/src/app/apps/be/start.sh && \
+    echo 'node dist/app.js' >> /usr/src/app/apps/be/start.sh && \
+    chmod +x /usr/src/app/apps/be/start.sh
+
+
+
+# Expose the port that the application listens on
+EXPOSE 3000
+
+# Switch to non-root user
+USER node
+
+# Run the startup script
+# CMD ["/usr/src/app/apps/be/start.sh"]
+CMD ["/bin/sh", "-c", "/usr/src/app/apps/be/start.sh || tail -f /dev/null"]
